@@ -58,11 +58,11 @@ namespace WorkerServiceDemo.CronService
             };
         }
 
-        public void Run(TaskService<bool> task)
+        public void Run(TaskService<bool> task, CancellationToken cancellationToken)
         {
             CrontabSchedule _schedule = CrontabSchedule.Parse(task.Expression, new CrontabSchedule.ParseOptions { IncludingSeconds = true });
             var _nextRun = _schedule.GetNextOccurrence(DateTime.Now);
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 var now = DateTime.Now;
                 if (now > _nextRun)
@@ -83,7 +83,7 @@ namespace WorkerServiceDemo.CronService
 
                     _nextRun = _schedule.GetNextOccurrence(DateTime.Now);
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(1500);
             }
         }
 
@@ -91,7 +91,7 @@ namespace WorkerServiceDemo.CronService
         {
             foreach (var task in tasks)
             {
-                _ = Task.Run(() => this.Run(task), cancellationToken);
+                _ = Task.Run(() => this.Run(task, cancellationToken), cancellationToken);
             }
             await Task.Delay(1000);
         }
