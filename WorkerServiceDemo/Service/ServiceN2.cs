@@ -18,7 +18,15 @@ namespace WorkerServiceDemo.Service
 
         public bool DoWork()
         {
-            _logger.LogInformation($"Service starts. {DateTime.Now.ToString("F")}");
+            //_logger.LogInformation($"Service starts. {DateTime.Now.ToString("F")}");
+            int i = 1;
+            while (i < 100)
+            {
+                _logger.LogInformation($"ServiceN2: " + i);
+                i++;
+                Thread.Sleep(1000);
+            }
+            _logger.LogInformation($"ServiceN2: Done!!!!!!!!!!!");
             return true;
         }
 

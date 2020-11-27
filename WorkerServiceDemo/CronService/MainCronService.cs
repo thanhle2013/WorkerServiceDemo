@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using NCrontab;
 using System;
 using System.Collections.Generic;
@@ -24,15 +25,18 @@ namespace WorkerServiceDemo.CronService
          */
         readonly ServiceN1 _serviceN1;
         readonly ServiceN2 _serviceN2;
+        private readonly ILogger<MainCronService> _logger;
 
-        List<TaskService<bool>> tasks;
+        List<TaskService<bool>> taskServices;
+        List<Task> tasks = new List<Task>();
 
-        public MainCronService(ServiceN1 serviceN1, ServiceN2 serviceN2)
+        public MainCronService(ServiceN1 serviceN1, ServiceN2 serviceN2, ILogger<MainCronService> logger)
         {
             _serviceN1 = serviceN1;
             _serviceN2 = serviceN2;
+            _logger = logger;
 
-            tasks = new List<TaskService<bool>>()
+            taskServices = new List<TaskService<bool>>()
             {
                 new TaskService<bool>()
                 {
@@ -71,10 +75,10 @@ namespace WorkerServiceDemo.CronService
                     Debug.WriteLine($"Debug start: ${task.Name}");
                     if (task.Fork)
                     {
-                        new System.Threading.Thread(() =>
+                        Task.Factory.StartNew(() =>
                         {
                             task.Func();
-                        }).Start();
+                        });
                     }
                     else
                     {
@@ -88,17 +92,19 @@ namespace WorkerServiceDemo.CronService
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
-        {
-            foreach (var task in tasks)
+        {       
+            foreach (var task in taskServices)
             {
-                _ = Task.Run(() => this.Run(task, cancellationToken), cancellationToken);
+                tasks.Add(Task.Run(() => this.Run(task, cancellationToken), cancellationToken));
             }
-            await Task.Delay(1000);
+            await Task.CompletedTask;
         }
 
-        public virtual async Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            Debug.WriteLine($"Debug Stop");
+            _logger.LogInformation($"Debug Stop");
+
+            await Task.Delay(1000);
             await Task.CompletedTask;
         }
     }
@@ -109,6 +115,6 @@ namespace WorkerServiceDemo.CronService
         public string Name { get; set; }
         public bool Fork { get; set; }
 
-        public Func<bool> Func { get; set; }
+        public Func<T> Func { get; set; }
     }
 }
